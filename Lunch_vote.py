@@ -39,6 +39,7 @@ TEXT = {
     "admin_login_btn": "관리자 로그인",
     "admin_logout_btn": "관리자 로그아웃",
     "admin_pw_label": "비밀번호 입력",
+    "admin_success": "관리자 권한 인증됨",  # [수정] 누락된 키 추가 완료
     "admin_session_header": "#### 세션 관리",
     "admin_date_label": "투표 날짜 설정",
     "admin_btn_open": "투표 세션 시작",
@@ -387,7 +388,7 @@ def main():
         
         st.divider()
         
-        # --- [UI 변경] 현재 후보 리스트를 버튼으로 표시 ---
+        # 현재 후보 리스트 버튼 표시
         st.subheader(TEXT["collect_list_header"].format(len(data["submissions"])))
         
         # 중복 포함 리스트
@@ -432,7 +433,7 @@ def main():
         
         st.markdown("####") # 여백
 
-        # === [UI 개선] 3개의 박스형 버튼으로 변경 ===
+        # === 3개의 박스형 버튼으로 변경 ===
         # st.columns(3)를 사용하여 3개의 식당을 가로로 배치
         col1, col2, col3 = st.columns(3)
         cols = [col1, col2, col3]
