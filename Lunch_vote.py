@@ -13,10 +13,9 @@ ADMIN_PASSWORD = "1079"
 DATA_FILE = "lunch_data.json"
 
 TEXT = {
-    # 앱 타이틀은 동적으로 생성되므로 여기서는 제외
     "sidebar_title": "사용자 접속",
     
-    # 상태별 메시지 (단정하고 깔끔한 어조)
+    # 상태별 메시지
     "state_closed_title": "투표 세션 대기",
     "state_closed_msg": "현재 활성화된 투표가 없습니다. 관리자의 세션 시작을 대기해 주십시오.",
     
@@ -63,7 +62,6 @@ def load_data():
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-            # 데이터 구조 호환성 체크
             if "submissions" not in data or "target_date" not in data:
                 return init_default_data()
             return data
@@ -86,7 +84,11 @@ st.set_page_config(page_title="점심 투표 시스템", page_icon="🍚", layou
 # 데이터 로드
 data = load_data()
 
-# [세션 상태 관리] 이름 고정 로직
+# [세션 상태 관리] 이름 고정 및 URL 연동 로직
+# 1. URL에 name 파라미터가 있으면 가져옴 (새로고침 방어)
+if "name" in st.query_params:
+    st.session_state.locked_name = st.query_params["name"]
+
 if "locked_name" not in st.session_state:
     st.session_state.locked_name = None
 
@@ -94,10 +96,18 @@ if "locked_name" not in st.session_state:
 with st.sidebar:
     st.header(TEXT["sidebar_title"])
     
-    # 1. 사용자 입장 (이름 고정 기능)
+    # 1. 사용자 입장 (이름 고정 기능 + 로그아웃)
     if st.session_state.locked_name:
         st.success(f"접속자: **{st.session_state.locked_name}** 님")
-        st.info("※ 이름 변경이 필요할 경우 페이지를 새로고침 하십시오.")
+        
+        # 이름 변경 (로그아웃) 버튼
+        if st.button("이름 변경 / 로그아웃", type="secondary", use_container_width=True):
+            st.session_state.locked_name = None
+            # URL 파라미터 초기화 (Streamlit 버전에 따라 다를 수 있음, 최신 기준)
+            if "name" in st.query_params:
+                del st.query_params["name"]
+            st.rerun()
+            
         username = st.session_state.locked_name
     else:
         with st.form("login_form"):
@@ -107,6 +117,8 @@ with st.sidebar:
             if btn_login:
                 if input_name.strip():
                     st.session_state.locked_name = input_name
+                    # URL에 이름 저장 -> 새로고침 해도 유지됨
+                    st.query_params["name"] = input_name
                     st.rerun()
                 else:
                     st.warning("성함을 입력해 주십시오.")
@@ -114,7 +126,7 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 2. 현재 참여 현황 (명단만 표시)
+    # 2. 현재 참여 현황
     active_users = list(set(data["submissions"].keys()) | set(data["final_votes"].keys()))
     if active_users:
         st.markdown(f"**현재 참여 인원: {len(active_users)}명**")
@@ -131,16 +143,14 @@ with st.sidebar:
         if pw == ADMIN_PASSWORD:
             st.success("관리자 권한 인증됨")
             
-            # (1) 투표 시작 (날짜 선택 기능 추가)
+            # (1) 투표 시작
             st.markdown("#### 세션 관리")
-            # 기본값은 오늘 날짜
             default_date = datetime.now().date()
             pick_date = st.date_input("투표 날짜 설정", value=default_date)
             
             if st.button(TEXT["btn_open"], use_container_width=True):
                 data = init_default_data()
                 data["status"] = "collecting"
-                # 날짜 포맷팅 (YYYY-MM-DD)
                 data["target_date"] = pick_date.strftime("%Y-%m-%d")
                 save_data(data)
                 st.rerun()
@@ -177,7 +187,7 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 
-# 타이틀 (날짜 포함)
+# 타이틀
 if data["target_date"]:
     st.title(f"📅 {data['target_date']} 점심 메뉴 선정")
 else:
@@ -204,17 +214,15 @@ elif data["status"] == "collecting":
     st.header(TEXT["state_collect_title"])
     st.write(TEXT["state_collect_desc"])
     
-    # 추천 입력 폼 (st.form 사용으로 버튼 클릭 강제)
     with st.container():
         # 이미 제출했는지 확인
         if username in data["submissions"]:
             st.success(TEXT["msg_done_suggest"])
             st.info(f"**등록된 메뉴:** {data['submissions'][username]}")
-            st.caption("※ 수정을 원하시면 아래에 다시 입력하여 등록하십시오.")
+            st.caption("※ 수정이 필요하면 아래에 다시 입력하여 등록하십시오.")
         
         with st.form("suggest_form"):
             menu = st.text_input(TEXT["input_label"])
-            # 버튼 클릭 시에만 제출됨
             submit = st.form_submit_button(TEXT["btn_submit"], use_container_width=True)
             
             if submit:
@@ -247,17 +255,14 @@ elif data["status"] == "voting":
     
     finalists = data["finalists"]
     
-    # 1. 투표 입력 폼
     with st.container():
         st.subheader(f"🗳️ **{username}** 연구원님의 선택")
         
-        # 이전 선택값 불러오기 (없으면 첫번째)
         prev_choice = data["final_votes"].get(username, finalists[0])
         if prev_choice not in finalists:
             prev_choice = finalists[0]
         
         with st.form("vote_form"):
-            # 라디오 버튼으로 선택
             choice = st.radio("방문 희망 식당 선택", finalists, index=finalists.index(prev_choice))
             submit_vote = st.form_submit_button(TEXT["btn_vote"], type="primary", use_container_width=True)
             
@@ -268,28 +273,22 @@ elif data["status"] == "voting":
             
     st.divider()
     
-    # 2. 결과 현황 (박스형 배치)
     st.subheader("📊 식당별 방문 인원 현황")
     
-    # 데이터 정리: { 식당이름 : [사용자1, 사용자2...] }
     vote_groups = {rest: [] for rest in finalists}
     for user, selected in data["final_votes"].items():
         if selected in vote_groups:
             vote_groups[selected].append(user)
             
-    # 3개 컬럼으로 박스 배치
     col1, col2, col3 = st.columns(3)
     cols = [col1, col2, col3]
     
     for i, rest in enumerate(finalists):
         with cols[i]:
-            # 식당 이름 (헤더)
             st.markdown(f"### {rest}")
-            # 인원 수
             count = len(vote_groups[rest])
             st.markdown(f"**총 {count}명**")
             
-            # 명단 박스 (Markdown 이용)
             if count > 0:
                 members = "\n".join([f"- {u}" for u in vote_groups[rest]])
                 st.info(members)
