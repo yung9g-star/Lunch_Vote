@@ -18,7 +18,7 @@ CONFIG = {
     "PAGE_ICON": "🍚",
 }
 
-# 모든 텍스트 메시지 (여기만 수정하면 문구 변경 가능)
+# 모든 텍스트 메시지
 TEXT = {
     "sidebar_header": "사용자 접속",
     "sidebar_welcome": "접속자: **{}** 님",
@@ -27,14 +27,18 @@ TEXT = {
     "sidebar_placeholder_name": "본인 성함을 입력하세요",
     "sidebar_btn_login": "입장하기",
     "sidebar_btn_logout": "나가기 (데이터 삭제)",
-    "sidebar_refresh": "🔄 실시간 현황 새로고침", # 새로고침 버튼 텍스트 추가
-    "sidebar_current_users": "현재 참여 인원: {}명",
-    "sidebar_no_users": "참여자가 없습니다.",
+    "sidebar_refresh": "🔄 새로고침", 
+    
+    # 우측 패널
+    "panel_header": "👥 실시간 참여 현황",
+    "panel_count": "현재 **{}명** 참여 중",
+    "panel_no_users": "대기 중...",
     
     # 관리자 관련
     "admin_header": "관리자 전용 기능",
-    "admin_pw_label": "관리자 비밀번호",
-    "admin_success": "관리자 권한 인증됨",
+    "admin_login_btn": "관리자 로그인",
+    "admin_logout_btn": "관리자 로그아웃",
+    "admin_pw_label": "비밀번호 입력",
     "admin_session_header": "#### 세션 관리",
     "admin_date_label": "투표 날짜 설정",
     "admin_btn_open": "투표 세션 시작",
@@ -42,6 +46,7 @@ TEXT = {
     "admin_btn_pick": "추천 마감 및 후보 3곳 추첨",
     "admin_btn_reroll": "후보 재추첨",
     "admin_btn_reset": "데이터 초기화",
+    "admin_err_pw": "비밀번호가 일치하지 않습니다.",
     
     # 메인 타이틀
     "title_default": "🍚 연구실 점심 메뉴 선정",
@@ -64,10 +69,10 @@ TEXT = {
     
     # 상태 2: 투표
     "vote_title": "Step 2. 최종 방문지 선택",
-    "vote_desc": "무작위로 선정된 3곳 중, 본인이 방문할 식당을 선택해 주십시오.",
+    "vote_desc": "선정된 3곳 중, 방문할 식당의 **[선택] 버튼**을 눌러주십시오.",
     "vote_user_header": "🗳️ **{}** 연구원님의 선택",
-    "vote_label": "방문 희망 식당 선택",
-    "vote_btn_submit": "선택 완료",
+    "vote_btn_select": "✅ 이 식당 선택",  # 버튼 텍스트
+    "vote_current_selection": "현재 선택: **{}**",
     "vote_result_header": "📊 식당별 방문 인원 현황",
     "vote_total_count": "총 {}명",
     "vote_no_selection": "선택 인원 없음",
@@ -90,47 +95,41 @@ TEXT = {
 # [2. 스타일 및 유틸리티 함수]
 # ==========================================
 
-def inject_smooth_css():
-    """부드러운 애니메이션과 깔끔한 UI를 위한 안전한 CSS 주입"""
+def inject_basic_css():
+    """기본 UI 스타일 보정 (깨짐 방지)"""
     st.markdown("""
     <style>
-        /* 버튼 호버 시 부드러운 색상 전환 */
+        /* 버튼 스타일 보정 */
         div.stButton > button {
-            transition: all 0.3s ease;
-        }
-        div.stButton > button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            border-radius: 8px;
+            font-weight: bold;
         }
         
-        /* 성공 메시지 박스 스타일 */
+        /* 알림 메시지 스타일 */
         div[data-testid="stNotification"] {
-            transition: opacity 0.5s ease-in-out;
             border-radius: 8px;
         }
         
-        /* Expander 헤더 부드럽게 */
-        .streamlit-expanderHeader {
-            transition: background-color 0.2s;
-        }
-        
-        /* 라디오 버튼 선택 영역 */
-        div[role="radiogroup"] {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
+        /* 박스형 컨테이너 스타일 */
+        div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"] {
+            gap: 1rem;
         }
     </style>
     """, unsafe_allow_html=True)
 
 def init_session_state():
     """세션 상태 초기화"""
-    # URL 파라미터 확인 (새로고침 방지)
+    # 1. 사용자 이름 (URL 연동)
     if "name" in st.query_params:
         st.session_state.locked_name = st.query_params["name"]
     
     if "locked_name" not in st.session_state:
         st.session_state.locked_name = None
+
+    # 2. 관리자 로그인 상태 (새로고침 해도 유지되도록)
+    if "admin_logged_in" not in st.session_state:
+        st.session_state.admin_logged_in = False
 
 # ==========================================
 # [3. 데이터 관리 함수]
@@ -174,20 +173,20 @@ def render_sidebar(data):
     with st.sidebar:
         st.header(TEXT["sidebar_header"])
         
-        # 0. 새로고침 버튼 (항상 노출)
+        # 0. 새로고침 버튼
         if st.button(TEXT["sidebar_refresh"], use_container_width=True):
             st.toast(TEXT["toast_refreshed"], icon="🔄")
             st.rerun()
 
         st.markdown("---")
 
-        # 1. 로그인/로그아웃 로직
+        # 1. 사용자 로그인/로그아웃
         if st.session_state.locked_name:
             st.success(TEXT["sidebar_welcome"].format(st.session_state.locked_name))
             
             if st.button(TEXT["sidebar_btn_logout"], type="secondary", use_container_width=True):
-                # 데이터 삭제 로직
                 user = st.session_state.locked_name
+                # 데이터 삭제
                 if user in data["submissions"]: del data["submissions"][user]
                 if user in data["final_votes"]: del data["final_votes"][user]
                 save_data(data)
@@ -212,27 +211,32 @@ def render_sidebar(data):
 
         st.markdown("---")
         
-        # 2. 참여 현황
-        active_users = list(set(data["submissions"].keys()) | set(data["final_votes"].keys()))
-        if active_users:
-            st.markdown(TEXT["sidebar_current_users"].format(len(active_users)))
-            for user in active_users:
-                st.text(f"- {user}")
-        else:
-            st.caption(TEXT["sidebar_no_users"])
-
-        st.markdown("---")
-        
-        # 3. 관리자 패널
+        # 관리자 패널 렌더링
         render_admin_panel(data)
 
 def render_admin_panel(data):
-    """관리자 패널 렌더링"""
+    """관리자 패널 (로그인 유지 기능 적용)"""
     with st.expander(TEXT["admin_header"]):
-        pw = st.text_input(TEXT["admin_pw_label"], type="password")
         
-        if pw == CONFIG["ADMIN_PASSWORD"]:
+        # 로그인 상태가 아니면 로그인 폼 표시
+        if not st.session_state.admin_logged_in:
+            with st.form("admin_login_form"):
+                pw = st.text_input(TEXT["admin_pw_label"], type="password")
+                if st.form_submit_button(TEXT["admin_login_btn"], use_container_width=True):
+                    if pw == CONFIG["ADMIN_PASSWORD"]:
+                        st.session_state.admin_logged_in = True
+                        st.rerun()
+                    else:
+                        st.error(TEXT["admin_err_pw"])
+        
+        # 로그인 상태면 기능 표시
+        else:
             st.success(TEXT["admin_success"])
+            if st.button(TEXT["admin_logout_btn"], type="secondary", use_container_width=True):
+                st.session_state.admin_logged_in = False
+                st.rerun()
+            
+            st.markdown("---")
             
             # (1) 세션 시작
             st.markdown(TEXT["admin_session_header"])
@@ -284,19 +288,35 @@ def render_admin_panel(data):
                 time.sleep(0.5)
                 st.rerun()
 
+def render_right_panel(data):
+    """우측 참여자 현황 패널"""
+    st.subheader(TEXT["panel_header"])
+    
+    active_users = list(set(data["submissions"].keys()) | set(data["final_votes"].keys()))
+    
+    with st.container(border=True):
+        if active_users:
+            st.markdown(TEXT["panel_count"].format(len(active_users)))
+            st.markdown("---")
+            for user in active_users:
+                # 상태: 투표/추천 완료시 체크
+                status = "✅" if (user in data["submissions"] or user in data["final_votes"]) else "⏳"
+                st.markdown(f"{status} **{user}**")
+        else:
+            st.caption(TEXT["panel_no_users"])
+
 # ==========================================
 # [5. 메인 앱 실행]
 # ==========================================
 
 def main():
     st.set_page_config(page_title=CONFIG["PAGE_TITLE"], page_icon=CONFIG["PAGE_ICON"], layout="centered")
-    inject_smooth_css()
+    inject_basic_css() # 기본 스타일 적용
     init_session_state()
     
     data = load_data()
     username = st.session_state.locked_name
 
-    # 사이드바 렌더링
     render_sidebar(data)
 
     # 타이틀
@@ -311,95 +331,113 @@ def main():
         st.warning(TEXT["msg_login_required"])
         st.stop()
 
-    # --- Phase Logic ---
-    
-    # 0. 닫힘 상태
-    if data["status"] == "closed":
-        st.info(TEXT["closed_title"])
-        st.write(TEXT["closed_msg"])
+    # --- 레이아웃 분할 ---
+    col_main, col_info = st.columns([7, 3])
 
-    # 1. 추천 상태 (Collecting)
-    elif data["status"] == "collecting":
-        st.header(TEXT["collect_title"])
-        st.write(TEXT["collect_desc"])
-        
-        # 입력 폼
-        with st.container():
-            if username in data["submissions"]:
-                st.success(TEXT["collect_success_msg"])
-                st.info(TEXT["collect_my_pick"].format(data['submissions'][username]))
-                st.caption(TEXT["collect_modify_info"])
-            
-            with st.form("suggest_form"):
-                menu = st.text_input(TEXT["collect_input_label"])
-                if st.form_submit_button(TEXT["collect_btn_submit"], use_container_width=True):
-                    if menu.strip():
-                        data["submissions"][username] = menu
-                        save_data(data)
-                        st.toast(TEXT["toast_suggest_done"], icon="👌")
-                        st.rerun()
-                    else:
-                        st.warning(TEXT["msg_menu_empty"])
-        
-        st.divider()
-        st.subheader(TEXT["collect_list_header"].format(len(data["submissions"])))
-        
-        cands = list(set(data["submissions"].values()))
-        if cands:
-            cols = st.columns(3)
-            for i, c in enumerate(cands):
-                cols[i%3].success(c)
-        else:
-            st.write(TEXT["collect_no_menu"])
+    # 우측 패널
+    with col_info:
+        render_right_panel(data)
 
-    # 2. 투표 상태 (Voting)
-    elif data["status"] == "voting":
-        st.header(TEXT["vote_title"])
-        st.write(TEXT["vote_desc"])
-        
-        finalists = data["finalists"]
-        
-        # 투표 폼
-        with st.container():
-            st.subheader(TEXT["vote_user_header"].format(username))
+    # 좌측 메인
+    with col_main:
+        # 0. 닫힘
+        if data["status"] == "closed":
+            st.info(TEXT["closed_title"])
+            st.write(TEXT["closed_msg"])
+
+        # 1. 추천 (Collecting)
+        elif data["status"] == "collecting":
+            st.header(TEXT["collect_title"])
+            st.write(TEXT["collect_desc"])
             
-            prev_choice = data["final_votes"].get(username, finalists[0])
-            if prev_choice not in finalists:
-                prev_choice = finalists[0]
+            with st.container():
+                if username in data["submissions"]:
+                    st.success(TEXT["collect_success_msg"])
+                    st.info(TEXT["collect_my_pick"].format(data['submissions'][username]))
+                    st.caption(TEXT["collect_modify_info"])
+                
+                # 추천 입력 폼 (엔터 방지용 폼 + 명확한 버튼)
+                with st.form("suggest_form"):
+                    menu = st.text_input(TEXT["collect_input_label"])
+                    if st.form_submit_button(TEXT["collect_btn_submit"], use_container_width=True):
+                        if menu.strip():
+                            data["submissions"][username] = menu
+                            save_data(data)
+                            st.toast(TEXT["toast_suggest_done"], icon="👌")
+                            st.rerun()
+                        else:
+                            st.warning(TEXT["msg_menu_empty"])
             
-            with st.form("vote_form"):
-                choice = st.radio(TEXT["vote_label"], finalists, index=finalists.index(prev_choice))
-                if st.form_submit_button(TEXT["vote_btn_submit"], type="primary", use_container_width=True):
-                    data["final_votes"][username] = choice
-                    save_data(data)
-                    st.toast(TEXT["toast_vote_done"], icon="🗳️")
-                    st.balloons()
-                    st.rerun()
-        
-        st.divider()
-        
-        # 결과 현황 (박스형)
-        st.subheader(TEXT["vote_result_header"])
-        
-        vote_groups = {rest: [] for rest in finalists}
-        for user, selected in data["final_votes"].items():
-            if selected in vote_groups:
-                vote_groups[selected].append(user)
-                
-        col1, col2, col3 = st.columns(3)
-        cols = [col1, col2, col3]
-        
-        for i, rest in enumerate(finalists):
-            with cols[i]:
-                st.markdown(f"### {rest}")
-                count = len(vote_groups[rest])
-                st.markdown(TEXT["vote_total_count"].format(count))
-                
-                if count > 0:
-                    members = "\n".join([f"- {u}" for u in vote_groups[rest]])
-                    st.info(members)
+            st.divider()
+            st.subheader(TEXT["collect_list_header"].format(len(data["submissions"])))
+            
+            cands = list(set(data["submissions"].values()))
+            if cands:
+                cols = st.columns(2)
+                for i, c in enumerate(cands):
+                    cols[i%2].success(c)
+            else:
+                st.write(TEXT["collect_no_menu"])
+
+        # 2. 투표 (Voting)
+        elif data["status"] == "voting":
+            st.header(TEXT["vote_title"])
+            st.write(TEXT["vote_desc"])
+            
+            finalists = data["finalists"]
+            
+            # 내 투표 현황 표시
+            with st.container():
+                st.subheader(TEXT["vote_user_header"].format(username))
+                my_pick = data["final_votes"].get(username)
+                if my_pick:
+                    st.success(TEXT["vote_current_selection"].format(my_pick))
                 else:
-                    st.caption(TEXT["vote_no_selection"])
+                    st.info("아직 선택하지 않았습니다.")
+            
+            st.markdown("####") # 여백
+
+            # === [UI 개선] 3개의 박스형 버튼으로 변경 ===
+            # st.columns(3)를 사용하여 3개의 식당을 가로로 배치
+            col1, col2, col3 = st.columns(3)
+            cols = [col1, col2, col3]
+
+            for i, rest in enumerate(finalists):
+                with cols[i]:
+                    # 박스 느낌을 주기 위한 컨테이너
+                    with st.container(border=True):
+                        st.markdown(f"<h3 style='text-align: center; color: #333;'>{rest}</h3>", unsafe_allow_html=True)
+                        st.markdown("---")
+                        # 투표 버튼 (폼 없이 직접 버튼 클릭 시 저장)
+                        # key를 유니크하게 주어 각 버튼 구분
+                        if st.button(TEXT["vote_btn_select"], key=f"vote_btn_{i}", use_container_width=True, type="primary"):
+                            data["final_votes"][username] = rest
+                            save_data(data)
+                            st.toast(TEXT["toast_vote_done"], icon="🗳️")
+                            st.balloons()
+                            st.rerun()
+            
+            st.divider()
+            
+            # 결과 현황
+            st.subheader(TEXT["vote_result_header"])
+            
+            vote_groups = {rest: [] for rest in finalists}
+            for user, selected in data["final_votes"].items():
+                if selected in vote_groups:
+                    vote_groups[selected].append(user)
+                    
+            for rest in finalists:
+                with st.container(border=True):
+                    st.markdown(f"### {rest}")
+                    count = len(vote_groups[rest])
+                    st.markdown(TEXT["vote_total_count"].format(count))
+                    
+                    if count > 0:
+                        members = ", ".join(vote_groups[rest])
+                        st.info(f"참여자: {members}")
+                    else:
+                        st.caption(TEXT["vote_no_selection"])
 
 if __name__ == "__main__":
     main()
