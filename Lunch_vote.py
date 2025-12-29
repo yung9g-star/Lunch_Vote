@@ -13,29 +13,29 @@ ADMIN_PASSWORD = "1079"
 DATA_FILE = "lunch_data.json"
 
 TEXT = {
-    "app_title": "Lunch Vote",
-    "app_subtitle": "🥗 오늘의 점심 메뉴 선정",
+    "app_title": "🥗 오늘의 점심 메뉴 선정",
+    "app_subtitle": "연구실 점심 투표 시스템",
     "sidebar_title": "참여자 목록",
     
     # 상태별 메시지
-    "state_closed_title": "😴 투표 대기 중",
+    "state_closed_title": "⛔ 투표 대기 중",
     "state_closed_msg": "관리자가 투표를 시작할 때까지 대기해주세요.",
     
-    "state_collect_title": "Step 1. 메뉴 추천",
-    "state_collect_desc": "오늘 땡기는 식당을 **하나만** 추천해주세요.",
-    "input_label": "추천할 식당 이름",
-    "btn_submit": "추천하기",
+    "state_collect_title": "Step 1. 메뉴 추천하기",
+    "state_collect_desc": "오늘 먹고 싶은 식당을 **하나만** 추천해주세요.",
+    "input_label": "추천할 식당 이름 입력",
+    "btn_submit": "이 메뉴로 추천하기",
     
-    "state_vote_title": "Step 2. 최종 선택",
+    "state_vote_title": "Step 2. 최종 선택하기",
     "state_vote_desc": "선정된 3곳 중 가장 가고 싶은 곳을 선택하세요.",
-    "btn_vote": "최종 투표하기",
+    "btn_vote": "최종 투표 제출",
     
     # 관리자
-    "admin_header": "관리자 설정",
+    "admin_header": "관리자 설정 (Admin)",
     "btn_open": "▶ 투표 시작 (Open)",
     "btn_pick": "🎲 3곳 추첨 (Pick)",
-    "btn_reroll": "🔄 재추첨 (Re-roll)",
-    "btn_reset": "🗑 초기화 (Reset)",
+    "btn_reroll": "🔄 다시 뽑기 (Re-roll)",
+    "btn_reset": "🗑 데이터 초기화 (Reset)",
     
     # 알림
     "msg_welcome": "환영합니다! 닉네임을 입력해주세요.",
@@ -48,65 +48,46 @@ TEXT = {
 }
 
 # ==========================================
-# [디자인] 안전한 CSS 스타일링 (iOS 느낌)
+# [디자인] 강제 화이트 모드 (색상 고정)
 # ==========================================
 def inject_custom_css():
     st.markdown("""
     <style>
-        /* 기본 폰트 설정 */
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
-        html, body, [class*="css"] {
-            font-family: 'Noto Sans KR', -apple-system, system-ui, sans-serif;
-        }
-        
-        /* 메인 배경 (연한 회색) - 다크모드 대응을 위해 !important 사용 자제 */
+        /* 1. 전체 배경 흰색 고정 */
         .stApp {
-            background-color: #F5F5F7;
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
         }
         
-        /* 컨텐츠 박스 디자인 (카드 형태) */
-        .css-1r6slb0, .stContainer {
-            background-color: #FFFFFF;
-            padding: 2rem;
-            border-radius: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            margin-bottom: 1rem;
+        /* 2. 사이드바 배경 밝은 회색 고정 */
+        section[data-testid="stSidebar"] {
+            background-color: #F8F9FA !important;
         }
-
-        /* 제목 스타일 */
-        h1 {
-            color: #1D1D1F;
-            font-weight: 800;
-            letter-spacing: -0.5px;
+        section[data-testid="stSidebar"] * {
+            color: #333333 !important;
         }
-        h3 {
-            color: #1D1D1F;
-            font-weight: 600;
+        
+        /* 3. 입력창 디자인 고정 (흰 배경, 검은 글씨) */
+        div[data-testid="stTextInput"] input {
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #DDDDDD !important;
         }
-        p {
-            color: #86868B;
+        
+        /* 4. 텍스트 가독성 확보 */
+        h1, h2, h3, p, div, span, label {
+            color: #000000 !important;
         }
-
-        /* 강조 텍스트 (파란색) */
-        .highlight {
-            color: #007AFF;
-            font-weight: bold;
-        }
-
-        /* 버튼 스타일 미세 조정 (깨짐 방지) */
+        
+        /* 5. 버튼 스타일 (기본 파란색 유지하되 텍스트 흰색 고정) */
         div.stButton > button {
-            border-radius: 12px;
-            font-weight: 600;
-            transition: transform 0.1s;
-        }
-        div.stButton > button:active {
-            transform: scale(0.98);
+            color: #FFFFFF !important;
+            border: none;
         }
         
-        /* Expander 스타일 */
-        .streamlit-expanderHeader {
-            background-color: white;
-            border-radius: 10px;
+        /* 6. 경고/성공 메시지 박스 텍스트 색상 예외 처리 */
+        div[data-testid="stAlert"] p, div[data-testid="stAlert"] div {
+            color: inherit !important; 
         }
     </style>
     """, unsafe_allow_html=True)
@@ -148,25 +129,26 @@ def save_data(data):
 # [앱 실행]
 # ==========================================
 
-st.set_page_config(page_title="Lunch Vote", page_icon="🍽️", layout="centered")
-inject_custom_css()
+st.set_page_config(page_title="Lunch Vote", page_icon="🍚", layout="centered")
+inject_custom_css() # 강제 화이트 모드 적용
 
 data = load_data()
 
 # --- 사이드바 ---
 with st.sidebar:
     st.header(TEXT["sidebar_title"])
-    username = st.text_input("닉네임 (Nickname)", key="user_name")
+    username = st.text_input("닉네임 (이름)", key="user_name")
     
     st.markdown("---")
     
-    # 참가자 목록 (깔끔한 리스트)
+    # 참가자 목록
     active_users = list(set(data["submissions"].keys()) | set(data["final_votes"].keys()))
     
     if active_users:
-        st.caption(f"총 {len(active_users)}명 참여 중")
+        st.caption(f"현재 {len(active_users)}명 참여 중")
+        # 깔끔하게 불렛 포인트로 표시
         for user in active_users:
-            st.markdown(f"👤 **{user}**")
+            st.markdown(f"- {user}")
     else:
         st.caption("아직 참여자가 없습니다.")
 
@@ -174,10 +156,11 @@ with st.sidebar:
     
     # 관리자 패널
     with st.expander(TEXT["admin_header"]):
-        pw = st.text_input("Password", type="password")
+        pw = st.text_input("비밀번호", type="password")
         if pw == ADMIN_PASSWORD:
-            st.success("Admin Mode")
+            st.success("관리자 권한 확인됨")
             
+            # 버튼들 사이 간격 확보
             if st.button(TEXT["btn_open"], use_container_width=True):
                 data = init_default_data()
                 data["status"] = "collecting"
@@ -204,6 +187,7 @@ with st.sidebar:
                         save_data(data)
                         st.rerun()
             
+            st.markdown("---")
             if st.button(TEXT["btn_reset"], use_container_width=True):
                 os.remove(DATA_FILE)
                 st.rerun()
@@ -212,9 +196,8 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 
-# 헤더
 st.title(TEXT["app_title"])
-st.markdown(f"**{TEXT['app_subtitle']}**")
+st.write(TEXT["app_subtitle"])
 st.markdown("---")
 
 if not username:
@@ -230,32 +213,35 @@ elif data["status"] == "collecting":
     st.subheader(TEXT["state_collect_title"])
     st.markdown(TEXT["state_collect_desc"])
     
-    # 카드형 컨테이너
+    # 컨테이너 사용하여 구역 구분
     with st.container():
         if username in data["submissions"]:
             st.success(f"✅ {TEXT['msg_done_suggest']}")
-            st.markdown(f"**My Pick:** {data['submissions'][username]}")
+            st.info(f"**나의 추천:** {data['submissions'][username]}")
         else:
             with st.form("suggest_form"):
                 menu = st.text_input(TEXT["input_label"])
+                # 엔터키 제출 방지 및 명확한 버튼 클릭 유도
                 if st.form_submit_button(TEXT["btn_submit"], use_container_width=True):
                     if menu.strip():
                         data["submissions"][username] = menu
                         save_data(data)
                         st.rerun()
                     else:
-                        st.warning("메뉴를 입력해주세요.")
+                        st.warning("메뉴 이름을 입력해주세요.")
     
-    st.markdown("")
-    st.markdown(f"#### 📋 현재 후보 ({len(data['submissions'])})")
+    st.markdown("---")
+    st.subheader(f"📋 현재 추천된 메뉴 ({len(data['submissions'])})")
     
-    # 후보 칩 스타일 표시
     cands = list(set(data["submissions"].values()))
     if cands:
-        # 가독성을 위해 HTML 대신 Streamlit 컬럼 사용 (안전성 확보)
+        # 가독성 좋은 컬럼 배치
         cols = st.columns(3)
         for i, c in enumerate(cands):
-            cols[i%3].info(c)
+            # Streamlit 기본 버튼 스타일을 활용하여 깔끔하게 표시 (클릭 기능 없음)
+            cols[i%3].text_input(label=f"후보 {i+1}", value=c, disabled=True, key=f"cand_{i}")
+    else:
+        st.write("아직 등록된 메뉴가 없습니다.")
 
 elif data["status"] == "voting":
     st.subheader(TEXT["state_vote_title"])
@@ -263,23 +249,22 @@ elif data["status"] == "voting":
     
     finalists = data["finalists"]
     
-    # 후보 3개 강조 표시
+    # 후보 3개 강조 (Metrics 사용)
     col1, col2, col3 = st.columns(3)
-    col1.metric("1번", finalists[0])
-    col2.metric("2번", finalists[1])
-    col3.metric("3번", finalists[2])
+    col1.metric("기호 1번", finalists[0])
+    col2.metric("기호 2번", finalists[1])
+    col3.metric("기호 3번", finalists[2])
     
     st.markdown("---")
     
     with st.container():
         st.write(f"**{username}**님의 선택")
         
-        # 이전 선택값 유지
         prev_choice = data["final_votes"].get(username, finalists[0])
         if prev_choice not in finalists: prev_choice = finalists[0]
         
         with st.form("vote_form"):
-            choice = st.radio("선택해주세요", finalists, index=finalists.index(prev_choice))
+            choice = st.radio("하나를 선택해주세요", finalists, index=finalists.index(prev_choice))
             if st.form_submit_button(TEXT["btn_vote"], type="primary", use_container_width=True):
                 data["final_votes"][username] = choice
                 save_data(data)
@@ -288,14 +273,12 @@ elif data["status"] == "voting":
     # 결과 그래프
     if data["final_votes"]:
         st.markdown("---")
-        st.subheader("📊 실시간 결과")
+        st.subheader("📊 실시간 득표 현황")
         
-        df = pd.DataFrame(list(data["final_votes"].items()), columns=["User", "Choice"])
-        counts = df["Choice"].value_counts()
+        df = pd.DataFrame(list(data["final_votes"].items()), columns=["닉네임", "선택"])
+        counts = df["선택"].value_counts()
         
-        # 막대 그래프
         st.bar_chart(counts)
         
-        # 상세 결과 (Expander)
-        with st.expander("상세 투표 내역 보기"):
+        with st.expander("누가 어디에 투표했나요?"):
             st.dataframe(df, use_container_width=True, hide_index=True)
