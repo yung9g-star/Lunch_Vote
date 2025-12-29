@@ -71,8 +71,14 @@ def load_data():
         return init_default_data()
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+            # [수정됨] 데이터 호환성 검사
+            # 만약 구버전 데이터(submissions 키가 없음)가 남아있다면 초기화
+            if "submissions" not in data or "status" not in data:
+                return init_default_data()
+            return data
     except:
+        # 파일이 깨졌거나 읽을 수 없으면 초기화
         return init_default_data()
 
 def save_data(data):
@@ -105,6 +111,7 @@ with st.sidebar:
     st.subheader(TEXT["sidebar_participants_list"])
     
     # 추천 단계 참가자 vs 투표 단계 참가자
+    # load_data에서 구조를 보장하므로 이제 안전하게 keys() 호출 가능
     active_users = set(data["submissions"].keys()) | set(data["final_votes"].keys())
     
     if active_users:
