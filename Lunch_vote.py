@@ -44,64 +44,7 @@ TEXT = {
     "err_min_cand": "후보가 3개 이상이어야 합니다."
 }
 
-# ==========================================
-# [디자인] 안전한 색상 커스터마이징 (Safe CSS)
-# ==========================================
-def inject_custom_colors():
-    st.markdown("""
-    <style>
-        /* 1. 전체 배경색 (아주 연한 회색) */
-        .stApp {
-            background-color: #F8F9FA;
-        }
-        
-        /* 2. 사이드바 배경색 (흰색) */
-        section[data-testid="stSidebar"] {
-            background-color: #FFFFFF;
-            border-right: 1px solid #E9ECEF;
-        }
-        
-        /* 3. 메인 타이틀 색상 (진한 남색) */
-        h1 {
-            color: #2C3E50 !important;
-        }
-        
-        /* 4. 기본 버튼 스타일 (흰색 배경, 파란 테두리) */
-        div.stButton > button {
-            background-color: #FFFFFF;
-            color: #4A90E2;
-            border: 1px solid #4A90E2;
-            border-radius: 8px; /* 모서리만 살짝 둥글게 */
-        }
-        div.stButton > button:hover {
-            background-color: #EBF5FF;
-            color: #4A90E2;
-            border: 1px solid #4A90E2;
-        }
-        
-        /* 5. 강조 버튼(Primary) 스타일 (파란색 배경) */
-        button[kind="primary"] {
-            background-color: #4A90E2 !important;
-            color: white !important;
-            border: none !important;
-        }
-        button[kind="primary"]:hover {
-            background-color: #357ABD !important;
-        }
-
-        /* 6. 입력창 배경 (흰색 고정) */
-        div[data-testid="stTextInput"] input {
-            background-color: #FFFFFF;
-        }
-        
-        /* 7. 성공 메시지 박스 (연두색 느낌) */
-        div[data-testid="stNotification"] {
-            background-color: #E8F5E9;
-            border: 1px solid #C8E6C9;
-        }
-        
-    </style>
-    """, unsafe_allow_html=True)
+# (디자인 코드를 완전히 삭제했습니다. 이제 화면 깨짐이 발생하지 않습니다.)
 
 # ==========================================
 # [데이터] 로직 함수
@@ -143,7 +86,6 @@ def save_data(data):
 
 # 레이아웃 설정 (기본)
 st.set_page_config(page_title="점심 투표", page_icon="🍚", layout="centered")
-inject_custom_colors() # 색상 적용
 
 # 데이터 로드
 data = load_data()
