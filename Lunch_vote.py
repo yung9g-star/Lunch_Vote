@@ -13,7 +13,7 @@ from collections import Counter
 
 # 기본 설정값
 CONFIG = {
-    "ADMIN_PASSWORD": "1079",
+    "ADMIN_PASSWORD": "02060311",
     "DATA_FILE": "lunch_data.json",
     "PAGE_TITLE": "점심 투표 시스템",
     "PAGE_ICON": "🍚",
@@ -477,3 +477,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
